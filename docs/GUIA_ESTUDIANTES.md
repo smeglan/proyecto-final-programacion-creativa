@@ -1,6 +1,6 @@
 # Guía de la API para estudiantes
 
-Esta API permite consultar recursos organizados por temática y practicar cómo crear y consultar turnos de una barbería. Las respuestas están en formato JSON.
+Esta API permite consultar recursos organizados por temática y practicar cómo crear y consultar turnos de una barbería y reservas de libros. Las respuestas están en formato JSON.
 
 ## Antes de empezar
 
@@ -10,18 +10,12 @@ Cuando la API se ejecuta en tu computador, la dirección base es:
 http://localhost:3000
 ```
 
-Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` por esa URL. Por ejemplo:
-
-```text
-https://mi-api.up.railway.app
-```
-
-Puedes abrir las rutas `GET` en el navegador. Para enviar un `POST`, usa una herramienta como Postman, Insomnia, Thunder Client o el ejemplo de JavaScript de esta guía.
+Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` por esa URL. Puedes abrir las rutas `GET` en el navegador. Para enviar un `POST`, usa Postman, Insomnia, Thunder Client o el ejemplo de JavaScript de esta guía.
 
 ## ¿Qué significan GET y POST?
 
-- **GET** solicita información. En esta API puedes consultar temáticas, servicios y turnos.
-- **POST** envía información para crear un turno nuevo.
+- **GET** solicita información. Puedes consultar temáticas, libros, servicios, turnos y reservas.
+- **POST** envía información para crear un turno o una reserva.
 
 ## Rutas disponibles
 
@@ -32,36 +26,23 @@ Puedes abrir las rutas `GET` en el navegador. Para enviar un `POST`, usa una her
 | GET | `/api/animales` | Consulta ejemplos de animales |
 | GET | `/api/espacio` | Consulta ejemplos sobre el espacio |
 | GET | `/api/historia` | Consulta acontecimientos históricos |
-| GET | `/api/barberia` | Consulta servicios de la barbería |
+| GET | `/api/barberia` | Consulta servicios de barbería |
 | GET | `/api/barberia/turnos` | Consulta todos los turnos creados |
 | GET | `/api/barberia/turnos/ID` | Consulta un turno usando su ID |
 | POST | `/api/barberia/turnos` | Crea un turno |
+| GET | `/api/libros` | Consulta el catálogo de libros |
+| GET | `/api/libros/ID` | Consulta un libro por su ID |
+| GET | `/api/libros/reservas` | Consulta todas las reservas creadas |
+| GET | `/api/libros/reservas/ID` | Consulta una reserva por su ID |
+| POST | `/api/libros/reservas` | Crea una reserva de libro |
 
-## Consultar temáticas y servicios
+## Consultar recursos
 
-Abre esta dirección en el navegador:
+Abre `http://localhost:3000/api/tematicas` para ver los temas disponibles. Puedes consultar los servicios de barbería en `/api/barberia` y el catálogo de libros en `/api/libros`.
 
-```text
-http://localhost:3000/api/tematicas
-```
+## Crear un turno de barbería
 
-Para ver los servicios de barbería:
-
-```text
-http://localhost:3000/api/barberia
-```
-
-La respuesta contiene una lista de servicios con su ID, nombre, duración y precio. Los precios son datos de ejemplo.
-
-## Crear un turno con POST
-
-La ruta es:
-
-```text
-POST http://localhost:3000/api/barberia/turnos
-```
-
-Envía estos campos como JSON:
+Envía un `POST` a `/api/barberia/turnos` con estos campos como JSON:
 
 ```json
 {
@@ -72,96 +53,61 @@ Envía estos campos como JSON:
 }
 ```
 
-En Postman o una herramienta similar:
-
-1. Selecciona el método **POST**.
-2. Escribe la URL de la ruta.
-3. En **Body**, selecciona **raw** y el formato **JSON**.
-4. Pega el objeto JSON de ejemplo y envía la solicitud.
-
-Si todo sale bien, recibirás el turno creado, con un ID generado por la API:
-
-```json
-{
-  "id": "id-generado",
-  "nombre": "Ana",
-  "servicio": "Corte y barba",
-  "fecha": "2026-10-10",
-  "hora": "10:30",
-  "estado": "confirmado",
-  "creadoEn": "2026-10-04T12:00:00.000Z"
-}
-```
-
-El valor de `creadoEn` depende del momento en que se cree el turno. Copia el ID recibido para consultarlo después.
-
-### Ejemplo con JavaScript
+En Postman, selecciona el método **POST**, escribe la URL, elige **Body → raw → JSON** y envía el objeto. La respuesta contiene el turno creado y un ID que puedes usar para consultarlo después.
 
 ```js
 const respuesta = await fetch('http://localhost:3000/api/barberia/turnos', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    nombre: 'Ana',
-    servicio: 'Corte y barba',
-    fecha: '2026-10-10',
-    hora: '10:30'
-  })
+  body: JSON.stringify({ nombre: 'Ana', servicio: 'Corte y barba', fecha: '2026-10-10', hora: '10:30' })
 });
-
 const turno = await respuesta.json();
 console.log(turno);
 ```
 
-## Consultar turnos con GET
+Puedes consultar todos los turnos en `/api/barberia/turnos` o uno en `/api/barberia/turnos/ID`.
 
-Para ver todos los turnos:
+## Reservar un libro
 
-```text
-GET http://localhost:3000/api/barberia/turnos
-```
-
-La respuesta tiene este formato:
+Consulta primero `/api/libros` y elige el ID de un libro. Envía un `POST` a `/api/libros/reservas` con tu nombre y el ID:
 
 ```json
 {
-  "cantidad": 1,
-  "turnos": [
-    {
-      "id": "id-generado",
-      "nombre": "Ana",
-      "servicio": "Corte y barba",
-      "fecha": "2026-10-10",
-      "hora": "10:30",
-      "estado": "confirmado",
-      "creadoEn": "2026-10-04T12:00:00.000Z"
-    }
-  ]
+  "nombre": "Ana",
+  "libroId": 1
 }
 ```
 
-Para consultar solo uno, reemplaza `ID` por el ID que devolvió el POST:
+La API responde con el ID de la reserva, el título del libro, su estado y la fecha de creación. Puedes consultar todas las reservas en `/api/libros/reservas` o una reserva en `/api/libros/reservas/ID`.
 
-```text
-GET http://localhost:3000/api/barberia/turnos/ID
+```js
+const respuesta = await fetch('http://localhost:3000/api/libros/reservas', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nombre: 'Ana', libroId: 1 })
+});
+const reserva = await respuesta.json();
+console.log(reserva);
 ```
+
+## Documentación interactiva
+
+Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia` y `/docs/libros`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md) y [API de Libros](./GUIA_LIBROS.md).
 
 ## Códigos de respuesta comunes
 
 | Código | Significado |
 | --- | --- |
 | 200 | La consulta se realizó correctamente |
-| 201 | El turno se creó correctamente |
+| 201 | El turno o la reserva se creó correctamente |
 | 400 | El JSON no es válido o faltan campos requeridos |
-| 404 | La ruta, temática o turno no existe |
+| 404 | La ruta, recurso, turno o libro no existe |
 | 405 | El método HTTP no está habilitado para esa ruta |
 | 413 | El cuerpo de la solicitud supera 10 KB |
 | 500 | Ocurrió un error interno del servidor |
 
-Si recibes `400`, revisa que hayas enviado los cuatro campos como textos no vacíos y que el cuerpo sea JSON válido.
+## ¿Dónde quedan guardados los datos?
 
-## ¿Dónde quedan guardados los turnos?
+En local, los turnos se guardan en `data/turnos.json` y las reservas en `data/reservas-libros.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
 
-En local, la API guarda los turnos en `data/turnos.json`. En Railway, el servicio debe tener un Volume montado en `/data` y la variable `DATA_DIR=/data`; así se conserva el archivo entre despliegues. Si el servicio se reinicia sin un Volume configurado, no debes asumir que el archivo sobrevivirá.
-
-Esta API es una demostración para practicar `GET` y `POST`. No comprueba que la fecha y la hora sean válidas ni evita que dos turnos usen el mismo horario.
+Esta API es una demostración para practicar `GET` y `POST`. No comprueba que la fecha y la hora de los turnos sean válidas ni evita que dos turnos usen el mismo horario.

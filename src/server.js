@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
 import { createAppointment, findAppointment, listAppointments } from './appointments.js';
 import { createThemeRegistry } from './themes/index.js';
+import { createBookReservation, findBookReservation, listBookReservations } from './bookReservations.js';
+import { apiSpecifications } from './openapi.js';
 
 const themes = createThemeRegistry();
 const port = Number(process.env.PORT) || 3000;
@@ -46,6 +48,22 @@ const server = createServer(async (request, response) => {
     return sendJson(response, 400, { error: 'URL no válida.' });
   }
 
+  if (request.method === 'GET' && pathname === '/docs') {
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li></ul></body></html>');
+  }
+
+  const docsRoute = pathname.match(/^\/docs\/(barberia|libros)\/?$/);
+  if (docsRoute && request.method === 'GET') {
+    const grupo = docsRoute[1];
+    const specUrl = `/api/openapi/${grupo}.json`;
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación ${grupo}</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head><body><nav><a href="/docs">Todas las API</a></nav><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui' });</script></body></html>`);
+  }
+
+  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros)\.json$/);
+  if (specRoute && request.method === 'GET') return sendJson(response, 200, apiSpecifications[specRoute[1]]);
+
   const appointmentRoute = pathname.match(/^\/api\/barberia\/turnos(?:\/([^/]+))?\/?$/);
   if (appointmentRoute) {
     const id = appointmentRoute[1] ? decodeURIComponent(appointmentRoute[1]) : null;
@@ -76,6 +94,40 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 201, appointment);
     }
     return sendJson(response, 405, { error: 'Usa GET para consultar turnos y POST para crear uno.' });
+  }
+
+  const bookReservationRoute = pathname.match(/^\/api\/libros\/reservas(?:\/([^/]+))?\/?$/);
+  if (bookReservationRoute) {
+    const id = bookReservationRoute[1] ? decodeURIComponent(bookReservationRoute[1]) : null;
+    if (request.method === 'GET') {
+      if (id) {
+        const reservation = await findBookReservation(id);
+        return reservation
+          ? sendJson(response, 200, reservation)
+          : sendJson(response, 404, { error: 'Reserva no encontrada.' });
+      }
+      const reservations = await listBookReservations();
+      return sendJson(response, 200, { cantidad: reservations.length, reservas: reservations });
+    }
+    if (request.method === 'POST' && !id) {
+      let input;
+      try {
+        input = await readJsonBody(request);
+      } catch (error) {
+        const status = error.message === 'BODY_TOO_LARGE' ? 413 : 400;
+        const message = error.message === 'BODY_TOO_LARGE' ? 'El cuerpo supera el límite de 10 KB.' : 'Envía un JSON válido.';
+        return sendJson(response, status, { error: message });
+      }
+      const { nombre, libroId } = input ?? {};
+      if (typeof nombre !== 'string' || !nombre.trim() || !Number.isInteger(libroId) || libroId < 1) {
+        return sendJson(response, 400, { error: 'Se requieren nombre (texto no vacío) y libroId (número entero).' });
+      }
+      const book = themes.find((theme) => theme.slug === 'libros')?.recursos.find((item) => item.id === libroId);
+      if (!book) return sendJson(response, 404, { error: 'No existe un libro con ese libroId.' });
+      const reservation = await createBookReservation({ nombre }, book);
+      return sendJson(response, 201, reservation);
+    }
+    return sendJson(response, 405, { error: 'Usa GET para consultar reservas y POST para crear una.' });
   }
 
   if (request.method !== 'GET') {
