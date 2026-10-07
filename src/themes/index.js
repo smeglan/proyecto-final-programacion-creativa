@@ -4,7 +4,8 @@ import { historia } from './historia.js';
 import { barberia } from './barberia.js';
 import { libros } from './libros.js';
 import { marihuana } from './marihuana.js';
+import { peliculas } from './peliculas.js';
 
 export function createThemeRegistry() {
-  return [animales, espacio, historia, barberia, libros, marihuana];
+  return [animales, espacio, historia, barberia, libros, marihuana, peliculas];
 }

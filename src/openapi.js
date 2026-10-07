@@ -44,6 +44,15 @@ const orderSchema = {
   }
 };
 
+const ticketSchema = {
+  type: 'object', properties: {
+    id: { type: 'string' }, nombre: { type: 'string' }, peliculaId: { type: 'integer' },
+    titulo: { type: 'string' }, genero: { type: 'string' }, cantidad: { type: 'integer' },
+    precioUnitario: { type: 'integer' }, total: { type: 'integer' },
+    estado: { type: 'string', example: 'reservada' }, creadoEn: { type: 'string', format: 'date-time' }
+  }
+};
+
 export const apiSpecifications = {
   barberia: {
     openapi: '3.0.3', info: { title: 'API de Barbería', version: '1.0.0', description: 'Consulta los servicios y gestiona turnos de barbería.' },
@@ -98,5 +107,24 @@ export const apiSpecifications = {
         get: { tags: ['Pedidos'], summary: 'Consultar un pedido', parameters: [idParameter], responses: { 200: jsonResponse('Pedido encontrado', { $ref: '#/components/schemas/Pedido' }), 404: errorResponse } }
       }
     }, components: { schemas: { ...sharedSchemas, Pedido: orderSchema } }
+  },
+  peliculas: {
+    openapi: '3.0.3', info: { title: 'API de Películas', version: '1.0.0', description: 'Consulta la cartelera y crea o consulta entradas de películas.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Cartelera' }, { name: 'Entradas' }],
+    paths: {
+      '/api/peliculas': {
+        get: { tags: ['Cartelera'], summary: 'Listar películas disponibles', responses: { 200: jsonResponse('Películas disponibles', { type: 'object', properties: { tematica: { type: 'string' }, cantidad: { type: 'integer' }, recursos: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, titulo: { type: 'string' }, genero: { type: 'string' }, anio: { type: 'integer' }, duracionMinutos: { type: 'integer' }, clasificacion: { type: 'string' }, precio: { type: 'integer' } } } } } }) } }
+      },
+      '/api/peliculas/{id}': {
+        get: { tags: ['Cartelera'], summary: 'Consultar una película', parameters: [{ ...idParameter, description: 'ID de la película en la cartelera.' }], responses: { 200: jsonResponse('Película encontrada', { type: 'object' }), 404: errorResponse } }
+      },
+      '/api/peliculas/entradas': {
+        get: { tags: ['Entradas'], summary: 'Listar entradas', responses: { 200: jsonResponse('Entradas registradas', { type: 'object', properties: { cantidad: { type: 'integer' }, entradas: { type: 'array', items: { $ref: '#/components/schemas/Entrada' } } } }) } },
+        post: { tags: ['Entradas'], summary: 'Reservar entradas de una película', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nombre', 'peliculaId', 'cantidad'], properties: { nombre: { type: 'string', example: 'Ana' }, peliculaId: { type: 'integer', example: 1, description: 'ID existente en la cartelera de películas.' }, cantidad: { type: 'integer', example: 2, description: 'Número de entradas, mayor o igual a 1.' } } } } } }, responses: { 201: jsonResponse('Entrada creada', { $ref: '#/components/schemas/Entrada' }), 400: errorResponse, 404: errorResponse, 413: { description: 'El cuerpo supera 10 KB.' } } }
+      },
+      '/api/peliculas/entradas/{id}': {
+        get: { tags: ['Entradas'], summary: 'Consultar una entrada', parameters: [idParameter], responses: { 200: jsonResponse('Entrada encontrada', { $ref: '#/components/schemas/Entrada' }), 404: errorResponse } }
+      }
+    }, components: { schemas: { ...sharedSchemas, Entrada: ticketSchema } }
   }
 };

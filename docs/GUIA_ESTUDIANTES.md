@@ -40,6 +40,11 @@ Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` po
 | GET | `/api/marihuana/pedidos` | Consulta todos los pedidos creados |
 | GET | `/api/marihuana/pedidos/ID` | Consulta un pedido por su ID |
 | POST | `/api/marihuana/pedidos` | Crea un pedido de producto |
+| GET | `/api/peliculas` | Consulta la cartelera de películas |
+| GET | `/api/peliculas/ID` | Consulta una película por su ID |
+| GET | `/api/peliculas/entradas` | Consulta todas las entradas creadas |
+| GET | `/api/peliculas/entradas/ID` | Consulta una entrada por su ID |
+| POST | `/api/peliculas/entradas` | Reserva entradas de una película |
 
 ## Consultar recursos
 
@@ -119,9 +124,33 @@ const pedido = await respuesta.json();
 console.log(pedido);
 ```
 
+## Reservar entradas de películas
+
+Consulta primero `/api/peliculas` y elige el ID de una película. Envía un `POST` a `/api/peliculas/entradas` con tu nombre, el ID de la película y la cantidad de entradas:
+
+```json
+{
+  "nombre": "Ana",
+  "peliculaId": 1,
+  "cantidad": 2
+}
+```
+
+La API responde con el ID de la entrada, la película, la cantidad, el precio unitario, el total, su estado y la fecha de creación. Puedes consultar todas las entradas en `/api/peliculas/entradas` o una en `/api/peliculas/entradas/ID`.
+
+```js
+const respuesta = await fetch('http://localhost:3000/api/peliculas/entradas', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nombre: 'Ana', peliculaId: 1, cantidad: 2 })
+});
+const entrada = await respuesta.json();
+console.log(entrada);
+```
+
 ## Documentación interactiva
 
-Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros` y `/docs/marihuana`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md) y [API de Marihuana](./GUIA_MARIHUANA.md).
+Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros`, `/docs/marihuana` y `/docs/peliculas`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md), [API de Marihuana](./GUIA_MARIHUANA.md) y [API de Películas](./GUIA_PELICULAS.md).
 
 ## Códigos de respuesta comunes
 
@@ -137,6 +166,6 @@ Las rutas y ejemplos también están disponibles en Swagger UI, separados por se
 
 ## ¿Dónde quedan guardados los datos?
 
-En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json` y los pedidos de marihuana en `data/pedidos-marihuana.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
+En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json`, los pedidos de marihuana en `data/pedidos-marihuana.json` y las entradas de películas en `data/entradas-peliculas.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
 
 Esta API es una demostración para practicar `GET` y `POST`. No comprueba que la fecha y la hora de los turnos sean válidas ni evita que dos turnos usen el mismo horario.

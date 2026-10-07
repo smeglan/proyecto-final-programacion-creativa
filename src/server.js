@@ -3,6 +3,7 @@ import { createAppointment, findAppointment, listAppointments } from './appointm
 import { createThemeRegistry } from './themes/index.js';
 import { createBookReservation, findBookReservation, listBookReservations } from './bookReservations.js';
 import { createOrder, findOrder, listOrders } from './orders.js';
+import { createTicket, findTicket, listTickets } from './tickets.js';
 import { apiSpecifications } from './openapi.js';
 
 const themes = createThemeRegistry();
@@ -51,10 +52,10 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && pathname === '/docs') {
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li><li><a href="/docs/marihuana">API de Marihuana</a></li></ul></body></html>');
+    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li><li><a href="/docs/marihuana">API de Marihuana</a></li><li><a href="/docs/peliculas">API de Películas</a></li></ul></body></html>');
   }
 
-  const docsRoute = pathname.match(/^\/docs\/(barberia|libros|marihuana)\/?$/);
+  const docsRoute = pathname.match(/^\/docs\/(barberia|libros|marihuana|peliculas)\/?$/);
   if (docsRoute && request.method === 'GET') {
     const grupo = docsRoute[1];
     const specUrl = `/api/openapi/${grupo}.json`;
@@ -62,7 +63,7 @@ const server = createServer(async (request, response) => {
     return response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación ${grupo}</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head><body><nav><a href="/docs">Todas las API</a></nav><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui' });</script></body></html>`);
   }
 
-  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros|marihuana)\.json$/);
+  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros|marihuana|peliculas)\.json$/);
   if (specRoute && request.method === 'GET') return sendJson(response, 200, apiSpecifications[specRoute[1]]);
 
   const appointmentRoute = pathname.match(/^\/api\/barberia\/turnos(?:\/([^/]+))?\/?$/);
@@ -163,6 +164,40 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 201, order);
     }
     return sendJson(response, 405, { error: 'Usa GET para consultar pedidos y POST para crear uno.' });
+  }
+
+  const ticketRoute = pathname.match(/^\/api\/peliculas\/entradas(?:\/([^/]+))?\/?$/);
+  if (ticketRoute) {
+    const id = ticketRoute[1] ? decodeURIComponent(ticketRoute[1]) : null;
+    if (request.method === 'GET') {
+      if (id) {
+        const ticket = await findTicket(id);
+        return ticket
+          ? sendJson(response, 200, ticket)
+          : sendJson(response, 404, { error: 'Entrada no encontrada.' });
+      }
+      const tickets = await listTickets();
+      return sendJson(response, 200, { cantidad: tickets.length, entradas: tickets });
+    }
+    if (request.method === 'POST' && !id) {
+      let input;
+      try {
+        input = await readJsonBody(request);
+      } catch (error) {
+        const status = error.message === 'BODY_TOO_LARGE' ? 413 : 400;
+        const message = error.message === 'BODY_TOO_LARGE' ? 'El cuerpo supera el límite de 10 KB.' : 'Envía un JSON válido.';
+        return sendJson(response, status, { error: message });
+      }
+      const { nombre, peliculaId, cantidad } = input ?? {};
+      if (typeof nombre !== 'string' || !nombre.trim() || !Number.isInteger(peliculaId) || peliculaId < 1 || !Number.isInteger(cantidad) || cantidad < 1) {
+        return sendJson(response, 400, { error: 'Se requieren nombre (texto no vacío), peliculaId (número entero) y cantidad (número entero mayor o igual a 1).' });
+      }
+      const movie = themes.find((theme) => theme.slug === 'peliculas')?.recursos.find((item) => item.id === peliculaId);
+      if (!movie) return sendJson(response, 404, { error: 'No existe una película con ese peliculaId.' });
+      const ticket = await createTicket({ nombre, cantidad }, movie);
+      return sendJson(response, 201, ticket);
+    }
+    return sendJson(response, 405, { error: 'Usa GET para consultar entradas y POST para crear una.' });
   }
 
   if (request.method !== 'GET') {
