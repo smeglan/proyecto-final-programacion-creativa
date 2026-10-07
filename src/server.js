@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { createAppointment, findAppointment, listAppointments } from './appointments.js';
 import { createThemeRegistry } from './themes/index.js';
 import { createBookReservation, findBookReservation, listBookReservations } from './bookReservations.js';
+import { createOrder, findOrder, listOrders } from './orders.js';
 import { apiSpecifications } from './openapi.js';
 
 const themes = createThemeRegistry();
@@ -50,10 +51,10 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && pathname === '/docs') {
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li></ul></body></html>');
+    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li><li><a href="/docs/marihuana">API de Marihuana</a></li></ul></body></html>');
   }
 
-  const docsRoute = pathname.match(/^\/docs\/(barberia|libros)\/?$/);
+  const docsRoute = pathname.match(/^\/docs\/(barberia|libros|marihuana)\/?$/);
   if (docsRoute && request.method === 'GET') {
     const grupo = docsRoute[1];
     const specUrl = `/api/openapi/${grupo}.json`;
@@ -61,7 +62,7 @@ const server = createServer(async (request, response) => {
     return response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación ${grupo}</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head><body><nav><a href="/docs">Todas las API</a></nav><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui' });</script></body></html>`);
   }
 
-  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros)\.json$/);
+  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros|marihuana)\.json$/);
   if (specRoute && request.method === 'GET') return sendJson(response, 200, apiSpecifications[specRoute[1]]);
 
   const appointmentRoute = pathname.match(/^\/api\/barberia\/turnos(?:\/([^/]+))?\/?$/);
@@ -128,6 +129,40 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 201, reservation);
     }
     return sendJson(response, 405, { error: 'Usa GET para consultar reservas y POST para crear una.' });
+  }
+
+  const orderRoute = pathname.match(/^\/api\/marihuana\/pedidos(?:\/([^/]+))?\/?$/);
+  if (orderRoute) {
+    const id = orderRoute[1] ? decodeURIComponent(orderRoute[1]) : null;
+    if (request.method === 'GET') {
+      if (id) {
+        const order = await findOrder(id);
+        return order
+          ? sendJson(response, 200, order)
+          : sendJson(response, 404, { error: 'Pedido no encontrado.' });
+      }
+      const orders = await listOrders();
+      return sendJson(response, 200, { cantidad: orders.length, pedidos: orders });
+    }
+    if (request.method === 'POST' && !id) {
+      let input;
+      try {
+        input = await readJsonBody(request);
+      } catch (error) {
+        const status = error.message === 'BODY_TOO_LARGE' ? 413 : 400;
+        const message = error.message === 'BODY_TOO_LARGE' ? 'El cuerpo supera el límite de 10 KB.' : 'Envía un JSON válido.';
+        return sendJson(response, status, { error: message });
+      }
+      const { nombre, productoId, cantidad } = input ?? {};
+      if (typeof nombre !== 'string' || !nombre.trim() || !Number.isInteger(productoId) || productoId < 1 || !Number.isInteger(cantidad) || cantidad < 1) {
+        return sendJson(response, 400, { error: 'Se requieren nombre (texto no vacío), productoId (número entero) y cantidad (número entero mayor o igual a 1).' });
+      }
+      const product = themes.find((theme) => theme.slug === 'marihuana')?.recursos.find((item) => item.id === productoId);
+      if (!product) return sendJson(response, 404, { error: 'No existe un producto con ese productoId.' });
+      const order = await createOrder({ nombre, cantidad }, product);
+      return sendJson(response, 201, order);
+    }
+    return sendJson(response, 405, { error: 'Usa GET para consultar pedidos y POST para crear uno.' });
   }
 
   if (request.method !== 'GET') {

@@ -35,6 +35,15 @@ const reservationSchema = {
   }
 };
 
+const orderSchema = {
+  type: 'object', properties: {
+    id: { type: 'string' }, nombre: { type: 'string' }, productoId: { type: 'integer' },
+    producto: { type: 'string' }, categoria: { type: 'string' }, cantidad: { type: 'integer' },
+    precioUnitario: { type: 'integer' }, total: { type: 'integer' },
+    estado: { type: 'string', example: 'pendiente' }, creadoEn: { type: 'string', format: 'date-time' }
+  }
+};
+
 export const apiSpecifications = {
   barberia: {
     openapi: '3.0.3', info: { title: 'API de Barbería', version: '1.0.0', description: 'Consulta los servicios y gestiona turnos de barbería.' },
@@ -70,5 +79,24 @@ export const apiSpecifications = {
         get: { tags: ['Reservas'], summary: 'Consultar una reserva', parameters: [idParameter], responses: { 200: jsonResponse('Reserva encontrada', { $ref: '#/components/schemas/Reserva' }), 404: errorResponse } }
       }
     }, components: { schemas: { ...sharedSchemas, Reserva: reservationSchema } }
+  },
+  marihuana: {
+    openapi: '3.0.3', info: { title: 'API de Marihuana', version: '1.0.0', description: 'Consulta los productos y gestiona pedidos de una tienda de marihuana.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Productos' }, { name: 'Pedidos' }],
+    paths: {
+      '/api/marihuana': {
+        get: { tags: ['Productos'], summary: 'Listar productos disponibles', responses: { 200: jsonResponse('Productos disponibles', { type: 'object', properties: { tematica: { type: 'string' }, cantidad: { type: 'integer' }, recursos: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, producto: { type: 'string' }, categoria: { type: 'string' }, thc: { type: 'string' }, precio: { type: 'integer' } } } } } }) } }
+      },
+      '/api/marihuana/{id}': {
+        get: { tags: ['Productos'], summary: 'Consultar un producto', parameters: [{ ...idParameter, description: 'ID del producto en el catálogo.' }], responses: { 200: jsonResponse('Producto encontrado', { type: 'object' }), 404: errorResponse } }
+      },
+      '/api/marihuana/pedidos': {
+        get: { tags: ['Pedidos'], summary: 'Listar pedidos', responses: { 200: jsonResponse('Pedidos registrados', { type: 'object', properties: { cantidad: { type: 'integer' }, pedidos: { type: 'array', items: { $ref: '#/components/schemas/Pedido' } } } }) } },
+        post: { tags: ['Pedidos'], summary: 'Crear un pedido de un producto del catálogo', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nombre', 'productoId', 'cantidad'], properties: { nombre: { type: 'string', example: 'Ana' }, productoId: { type: 'integer', example: 1, description: 'ID existente en el catálogo de marihuana.' }, cantidad: { type: 'integer', example: 2, description: 'Número de unidades, mayor o igual a 1.' } } } } } }, responses: { 201: jsonResponse('Pedido creado', { $ref: '#/components/schemas/Pedido' }), 400: errorResponse, 404: errorResponse, 413: { description: 'El cuerpo supera 10 KB.' } } }
+      },
+      '/api/marihuana/pedidos/{id}': {
+        get: { tags: ['Pedidos'], summary: 'Consultar un pedido', parameters: [idParameter], responses: { 200: jsonResponse('Pedido encontrado', { $ref: '#/components/schemas/Pedido' }), 404: errorResponse } }
+      }
+    }, components: { schemas: { ...sharedSchemas, Pedido: orderSchema } }
   }
 };
