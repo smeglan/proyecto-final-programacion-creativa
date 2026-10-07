@@ -53,6 +53,23 @@ const ticketSchema = {
   }
 };
 
+const cosmeticAppointmentSchema = {
+  type: 'object', properties: {
+    id: { type: 'string' }, nombre: { type: 'string' }, servicio: { type: 'string' },
+    fecha: { type: 'string', example: '2026-10-10' }, hora: { type: 'string', example: '10:30' },
+    estado: { type: 'string', example: 'confirmado' }, creadoEn: { type: 'string', format: 'date-time' }
+  }
+};
+
+const eyeAppointmentSchema = {
+  type: 'object', properties: {
+    id: { type: 'string' }, pacienteId: { type: 'integer' }, paciente: { type: 'string' },
+    diagnostico: { type: 'string' }, motivo: { type: 'string' },
+    fecha: { type: 'string', example: '2026-10-10' }, hora: { type: 'string', example: '10:30' },
+    estado: { type: 'string', example: 'confirmado' }, creadoEn: { type: 'string', format: 'date-time' }
+  }
+};
+
 export const apiSpecifications = {
   barberia: {
     openapi: '3.0.3', info: { title: 'API de Barbería', version: '1.0.0', description: 'Consulta los servicios y gestiona turnos de barbería.' },
@@ -126,5 +143,43 @@ export const apiSpecifications = {
         get: { tags: ['Entradas'], summary: 'Consultar una entrada', parameters: [idParameter], responses: { 200: jsonResponse('Entrada encontrada', { $ref: '#/components/schemas/Entrada' }), 404: errorResponse } }
       }
     }, components: { schemas: { ...sharedSchemas, Entrada: ticketSchema } }
+  },
+  cosmeticos: {
+    openapi: '3.0.3', info: { title: 'API de Cosméticos', version: '1.0.0', description: 'Consulta los servicios de cosmetología y gestiona citas.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Servicios' }, { name: 'Citas' }],
+    paths: {
+      '/api/cosmeticos': {
+        get: { tags: ['Servicios'], summary: 'Listar servicios de cosmetología disponibles', responses: { 200: jsonResponse('Servicios disponibles', { type: 'object', properties: { tematica: { type: 'string' }, cantidad: { type: 'integer' }, recursos: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, servicio: { type: 'string' }, duracionMinutos: { type: 'integer' }, precio: { type: 'integer' } } } } } }) } }
+      },
+      '/api/cosmeticos/{id}': {
+        get: { tags: ['Servicios'], summary: 'Consultar un servicio', parameters: [{ ...idParameter, description: 'ID del servicio en el catálogo.' }], responses: { 200: jsonResponse('Servicio encontrado', { type: 'object' }), 404: errorResponse } }
+      },
+      '/api/cosmeticos/citas': {
+        get: { tags: ['Citas'], summary: 'Listar citas', responses: { 200: jsonResponse('Citas registradas', { type: 'object', properties: { cantidad: { type: 'integer' }, citas: { type: 'array', items: { $ref: '#/components/schemas/Cita' } } } }) } },
+        post: { tags: ['Citas'], summary: 'Crear una cita', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nombre', 'servicio', 'fecha', 'hora'], properties: { nombre: { type: 'string' }, servicio: { type: 'string' }, fecha: { type: 'string', example: '2026-10-10' }, hora: { type: 'string', example: '10:30' } } } } } }, responses: { 201: jsonResponse('Cita creada', { $ref: '#/components/schemas/Cita' }), 400: errorResponse, 413: { description: 'El cuerpo supera 10 KB.' } } }
+      },
+      '/api/cosmeticos/citas/{id}': {
+        get: { tags: ['Citas'], summary: 'Consultar una cita', parameters: [idParameter], responses: { 200: jsonResponse('Cita encontrada', { $ref: '#/components/schemas/Cita' }), 404: errorResponse } }
+      }
+    }, components: { schemas: { ...sharedSchemas, Cita: cosmeticAppointmentSchema } }
+  },
+  oftalmologia: {
+    openapi: '3.0.3', info: { title: 'API de Oftalmología', version: '1.0.0', description: 'Consulta los pacientes y gestiona citas de una consulta de oftalmología.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Pacientes' }, { name: 'Citas' }],
+    paths: {
+      '/api/oftalmologia': {
+        get: { tags: ['Pacientes'], summary: 'Listar pacientes', responses: { 200: jsonResponse('Pacientes registrados', { type: 'object', properties: { tematica: { type: 'string' }, cantidad: { type: 'integer' }, recursos: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, nombre: { type: 'string' }, edad: { type: 'integer' }, diagnostico: { type: 'string' }, agudezaVisual: { type: 'string' } } } } } }) } }
+      },
+      '/api/oftalmologia/{id}': {
+        get: { tags: ['Pacientes'], summary: 'Consultar un paciente', parameters: [{ ...idParameter, description: 'ID del paciente en la consulta.' }], responses: { 200: jsonResponse('Paciente encontrado', { type: 'object' }), 404: errorResponse } }
+      },
+      '/api/oftalmologia/citas': {
+        get: { tags: ['Citas'], summary: 'Listar citas', responses: { 200: jsonResponse('Citas registradas', { type: 'object', properties: { cantidad: { type: 'integer' }, citas: { type: 'array', items: { $ref: '#/components/schemas/Cita' } } } }) } },
+        post: { tags: ['Citas'], summary: 'Crear una cita para un paciente', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['pacienteId', 'motivo', 'fecha', 'hora'], properties: { pacienteId: { type: 'integer', example: 1, description: 'ID existente en la lista de pacientes.' }, motivo: { type: 'string', example: 'Control de miopía' }, fecha: { type: 'string', example: '2026-10-10' }, hora: { type: 'string', example: '10:30' } } } } } }, responses: { 201: jsonResponse('Cita creada', { $ref: '#/components/schemas/Cita' }), 400: errorResponse, 404: errorResponse, 413: { description: 'El cuerpo supera 10 KB.' } } }
+      },
+      '/api/oftalmologia/citas/{id}': {
+        get: { tags: ['Citas'], summary: 'Consultar una cita', parameters: [idParameter], responses: { 200: jsonResponse('Cita encontrada', { $ref: '#/components/schemas/Cita' }), 404: errorResponse } }
+      }
+    }, components: { schemas: { ...sharedSchemas, Cita: eyeAppointmentSchema } }
   }
 };

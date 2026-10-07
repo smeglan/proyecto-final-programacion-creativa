@@ -45,6 +45,16 @@ Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` po
 | GET | `/api/peliculas/entradas` | Consulta todas las entradas creadas |
 | GET | `/api/peliculas/entradas/ID` | Consulta una entrada por su ID |
 | POST | `/api/peliculas/entradas` | Reserva entradas de una película |
+| GET | `/api/cosmeticos` | Consulta los servicios de cosmetología |
+| GET | `/api/cosmeticos/ID` | Consulta un servicio por su ID |
+| GET | `/api/cosmeticos/citas` | Consulta todas las citas creadas |
+| GET | `/api/cosmeticos/citas/ID` | Consulta una cita por su ID |
+| POST | `/api/cosmeticos/citas` | Crea una cita de cosmetología |
+| GET | `/api/oftalmologia` | Consulta los pacientes registrados |
+| GET | `/api/oftalmologia/ID` | Consulta un paciente por su ID |
+| GET | `/api/oftalmologia/citas` | Consulta todas las citas creadas |
+| GET | `/api/oftalmologia/citas/ID` | Consulta una cita por su ID |
+| POST | `/api/oftalmologia/citas` | Crea una cita de oftalmología |
 
 ## Consultar recursos
 
@@ -148,9 +158,59 @@ const entrada = await respuesta.json();
 console.log(entrada);
 ```
 
+## Crear una cita de cosmetología
+
+Envía un `POST` a `/api/cosmeticos/citas` con tu nombre, el servicio deseado, la fecha y la hora:
+
+```json
+{
+  "nombre": "Ana",
+  "servicio": "Limpieza facial profunda",
+  "fecha": "2026-10-10",
+  "hora": "10:30"
+}
+```
+
+La API responde con el ID de la cita, el servicio, la fecha, la hora, su estado y la fecha de creación. Puedes consultar todas las citas en `/api/cosmeticos/citas` o una en `/api/cosmeticos/citas/ID`.
+
+```js
+const respuesta = await fetch('http://localhost:3000/api/cosmeticos/citas', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nombre: 'Ana', servicio: 'Limpieza facial profunda', fecha: '2026-10-10', hora: '10:30' })
+});
+const cita = await respuesta.json();
+console.log(cita);
+```
+
+## Crear una cita de oftalmología
+
+Consulta primero `/api/oftalmologia` y elige el ID de un paciente. Envía un `POST` a `/api/oftalmologia/citas` con el ID del paciente, el motivo, la fecha y la hora:
+
+```json
+{
+  "pacienteId": 1,
+  "motivo": "Control de miopía",
+  "fecha": "2026-10-10",
+  "hora": "10:30"
+}
+```
+
+La API responde con el ID de la cita, el paciente, su diagnóstico, el motivo, la fecha, la hora, su estado y la fecha de creación. Puedes consultar todas las citas en `/api/oftalmologia/citas` o una en `/api/oftalmologia/citas/ID`.
+
+```js
+const respuesta = await fetch('http://localhost:3000/api/oftalmologia/citas', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ pacienteId: 1, motivo: 'Control de miopía', fecha: '2026-10-10', hora: '10:30' })
+});
+const cita = await respuesta.json();
+console.log(cita);
+```
+
 ## Documentación interactiva
 
-Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros`, `/docs/marihuana` y `/docs/peliculas`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md), [API de Marihuana](./GUIA_MARIHUANA.md) y [API de Películas](./GUIA_PELICULAS.md).
+Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros`, `/docs/marihuana`, `/docs/peliculas`, `/docs/cosmeticos` y `/docs/oftalmologia`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md), [API de Marihuana](./GUIA_MARIHUANA.md), [API de Películas](./GUIA_PELICULAS.md), [API de Cosméticos](./GUIA_COSMETICOS.md) y [API de Oftalmología](./GUIA_OFTALMOLOGIA.md).
 
 ## Códigos de respuesta comunes
 
@@ -166,6 +226,6 @@ Las rutas y ejemplos también están disponibles en Swagger UI, separados por se
 
 ## ¿Dónde quedan guardados los datos?
 
-En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json`, los pedidos de marihuana en `data/pedidos-marihuana.json` y las entradas de películas en `data/entradas-peliculas.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
+En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json`, los pedidos de marihuana en `data/pedidos-marihuana.json`, las entradas de películas en `data/entradas-peliculas.json`, las citas de cosméticos en `data/citas-cosmeticos.json` y las citas de oftalmología en `data/citas-oftalmologia.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
 
 Esta API es una demostración para practicar `GET` y `POST`. No comprueba que la fecha y la hora de los turnos sean válidas ni evita que dos turnos usen el mismo horario.
