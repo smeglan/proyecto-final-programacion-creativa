@@ -1,6 +1,6 @@
 # Guía de la API para estudiantes
 
-Esta API permite consultar recursos organizados por temática y practicar cómo crear y consultar turnos de una barbería y reservas de libros. Las respuestas están en formato JSON.
+Esta API permite consultar recursos organizados por temática y practicar cómo crear y consultar turnos de una barbería, reservas de libros y publicaciones sobre animales, espacio o historia. Las respuestas están en formato JSON.
 
 ## Antes de empezar
 
@@ -14,8 +14,8 @@ Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` po
 
 ## ¿Qué significan GET y POST?
 
-- **GET** solicita información. Puedes consultar temáticas, libros, servicios, turnos y reservas.
-- **POST** envía información para crear un turno o una reserva.
+- **GET** solicita información. Puedes consultar temáticas, libros, servicios, turnos, reservas y publicaciones.
+- **POST** envía información para crear un turno, una reserva o una publicación.
 
 ## Rutas disponibles
 
@@ -24,8 +24,17 @@ Si tu profesor comparte una URL de Railway, reemplaza `http://localhost:3000` po
 | GET | `/` | Muestra información inicial |
 | GET | `/api/tematicas` | Lista las temáticas disponibles |
 | GET | `/api/animales` | Consulta ejemplos de animales |
+| GET | `/api/animales/publicaciones` | Consulta todas las publicaciones creadas |
+| GET | `/api/animales/publicaciones/ID` | Consulta una publicación por su ID |
+| POST | `/api/animales/publicaciones` | Crea una publicación |
 | GET | `/api/espacio` | Consulta ejemplos sobre el espacio |
+| GET | `/api/espacio/publicaciones` | Consulta todas las publicaciones creadas |
+| GET | `/api/espacio/publicaciones/ID` | Consulta una publicación por su ID |
+| POST | `/api/espacio/publicaciones` | Crea una publicación |
 | GET | `/api/historia` | Consulta acontecimientos históricos |
+| GET | `/api/historia/publicaciones` | Consulta todas las publicaciones creadas |
+| GET | `/api/historia/publicaciones/ID` | Consulta una publicación por su ID |
+| POST | `/api/historia/publicaciones` | Crea una publicación |
 | GET | `/api/barberia` | Consulta servicios de barbería |
 | GET | `/api/barberia/turnos` | Consulta todos los turnos creados |
 | GET | `/api/barberia/turnos/ID` | Consulta un turno usando su ID |
@@ -208,9 +217,32 @@ const cita = await respuesta.json();
 console.log(cita);
 ```
 
+## Crear una publicación
+
+Las temáticas animales, espacio e historia tienen la misma ruta de publicaciones: `/api/animales/publicaciones`, `/api/espacio/publicaciones` y `/api/historia/publicaciones`. Envía un `POST` a la que prefieras con un título y su contenido:
+
+```json
+{
+  "titulo": "Datos curiosos del jaguar",
+  "contenido": "El jaguar es el felino más grande de América y su mordida es muy potente."
+}
+```
+
+La API responde con el ID de la publicación, la temática a la que pertenece, su estado y la fecha de creación. Puedes consultar todas las publicaciones de una temática en su ruta o una en concreto usando su ID.
+
+```js
+const respuesta = await fetch('http://localhost:3000/api/animales/publicaciones', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ titulo: 'Datos curiosos del jaguar', contenido: 'El jaguar es el felino más grande de América.' })
+});
+const publicacion = await respuesta.json();
+console.log(publicacion);
+```
+
 ## Documentación interactiva
 
-Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros`, `/docs/marihuana`, `/docs/peliculas`, `/docs/cosmeticos` y `/docs/oftalmologia`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md), [API de Marihuana](./GUIA_MARIHUANA.md), [API de Películas](./GUIA_PELICULAS.md), [API de Cosméticos](./GUIA_COSMETICOS.md) y [API de Oftalmología](./GUIA_OFTALMOLOGIA.md).
+Las rutas y ejemplos también están disponibles en Swagger UI, separados por servicio: `/docs/barberia`, `/docs/libros`, `/docs/marihuana`, `/docs/peliculas`, `/docs/cosmeticos`, `/docs/oftalmologia`, `/docs/animales`, `/docs/espacio` y `/docs/historia`. Las guías especializadas están en [API de Barbería](./GUIA_BARBERIA.md), [API de Libros](./GUIA_LIBROS.md), [API de Marihuana](./GUIA_MARIHUANA.md), [API de Películas](./GUIA_PELICULAS.md), [API de Cosméticos](./GUIA_COSMETICOS.md) y [API de Oftalmología](./GUIA_OFTALMOLOGIA.md).
 
 ## Códigos de respuesta comunes
 
@@ -226,6 +258,6 @@ Las rutas y ejemplos también están disponibles en Swagger UI, separados por se
 
 ## ¿Dónde quedan guardados los datos?
 
-En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json`, los pedidos de marihuana en `data/pedidos-marihuana.json`, las entradas de películas en `data/entradas-peliculas.json`, las citas de cosméticos en `data/citas-cosmeticos.json` y las citas de oftalmología en `data/citas-oftalmologia.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
+En local, los turnos se guardan en `data/turnos.json`, las reservas en `data/reservas-libros.json`, los pedidos de marihuana en `data/pedidos-marihuana.json`, las entradas de películas en `data/entradas-peliculas.json`, las citas de cosméticos en `data/citas-cosmeticos.json`, las citas de oftalmología en `data/citas-oftalmologia.json` y las publicaciones en `data/publicaciones-animales.json`, `data/publicaciones-espacio.json` y `data/publicaciones-historia.json`. En Railway, configura un Volume montado en `/data` y la variable `DATA_DIR=/data` para conservar esos archivos entre despliegues.
 
 Esta API es una demostración para practicar `GET` y `POST`. No comprueba que la fecha y la hora de los turnos sean válidas ni evita que dos turnos usen el mismo horario.

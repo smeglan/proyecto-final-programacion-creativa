@@ -70,6 +70,30 @@ const eyeAppointmentSchema = {
   }
 };
 
+const publicationSchema = {
+  type: 'object', properties: {
+    id: { type: 'string' }, tematica: { type: 'string', example: 'animales' },
+    titulo: { type: 'string' }, contenido: { type: 'string' },
+    estado: { type: 'string', example: 'publicada' }, creadoEn: { type: 'string', format: 'date-time' }
+  }
+};
+
+const publicationPaths = (slug, recursoPropiedades) => ({
+  [`/api/${slug}`]: {
+    get: { tags: ['Recursos'], summary: 'Listar recursos', responses: { 200: jsonResponse('Recursos disponibles', { type: 'object', properties: { tematica: { type: 'string' }, cantidad: { type: 'integer' }, recursos: { type: 'array', items: { type: 'object', properties: recursoPropiedades } } } }) } }
+  },
+  [`/api/${slug}/{id}`]: {
+    get: { tags: ['Recursos'], summary: 'Consultar un recurso', parameters: [{ ...idParameter, description: 'ID del recurso en la lista.' }], responses: { 200: jsonResponse('Recurso encontrado', { type: 'object' }), 404: errorResponse } }
+  },
+  [`/api/${slug}/publicaciones`]: {
+    get: { tags: ['Publicaciones'], summary: 'Listar publicaciones', responses: { 200: jsonResponse('Publicaciones registradas', { type: 'object', properties: { cantidad: { type: 'integer' }, publicaciones: { type: 'array', items: { $ref: '#/components/schemas/Publicacion' } } } }) } },
+    post: { tags: ['Publicaciones'], summary: 'Crear una publicación', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['titulo', 'contenido'], properties: { titulo: { type: 'string', example: 'Datos curiosos del jaguar' }, contenido: { type: 'string', example: 'El jaguar es el felino más grande de América.' } } } } } }, responses: { 201: jsonResponse('Publicación creada', { $ref: '#/components/schemas/Publicacion' }), 400: errorResponse, 413: { description: 'El cuerpo supera 10 KB.' } } }
+  },
+  [`/api/${slug}/publicaciones/{id}`]: {
+    get: { tags: ['Publicaciones'], summary: 'Consultar una publicación', parameters: [idParameter], responses: { 200: jsonResponse('Publicación encontrada', { $ref: '#/components/schemas/Publicacion' }), 404: errorResponse } }
+  }
+});
+
 export const apiSpecifications = {
   barberia: {
     openapi: '3.0.3', info: { title: 'API de Barbería', version: '1.0.0', description: 'Consulta los servicios y gestiona turnos de barbería.' },
@@ -181,5 +205,23 @@ export const apiSpecifications = {
         get: { tags: ['Citas'], summary: 'Consultar una cita', parameters: [idParameter], responses: { 200: jsonResponse('Cita encontrada', { $ref: '#/components/schemas/Cita' }), 404: errorResponse } }
       }
     }, components: { schemas: { ...sharedSchemas, Cita: eyeAppointmentSchema } }
+  },
+  animales: {
+    openapi: '3.0.3', info: { title: 'API de Animales', version: '1.0.0', description: 'Consulta datos sobre animales y crea publicaciones.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Recursos' }, { name: 'Publicaciones' }],
+    paths: publicationPaths('animales', { id: { type: 'integer' }, nombre: { type: 'string' }, habitat: { type: 'string' }, continente: { type: 'string' }, dato: { type: 'string' } }),
+    components: { schemas: { ...sharedSchemas, Publicacion: publicationSchema } }
+  },
+  espacio: {
+    openapi: '3.0.3', info: { title: 'API de Espacio', version: '1.0.0', description: 'Consulta datos sobre el espacio y crea publicaciones.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Recursos' }, { name: 'Publicaciones' }],
+    paths: publicationPaths('espacio', { id: { type: 'integer' }, nombre: { type: 'string' }, tipo: { type: 'string' }, dato: { type: 'string' } }),
+    components: { schemas: { ...sharedSchemas, Publicacion: publicationSchema } }
+  },
+  historia: {
+    openapi: '3.0.3', info: { title: 'API de Historia', version: '1.0.0', description: 'Consulta acontecimientos históricos y crea publicaciones.' },
+    servers: [{ url: '/' }], tags: [{ name: 'Recursos' }, { name: 'Publicaciones' }],
+    paths: publicationPaths('historia', { id: { type: 'integer' }, acontecimiento: { type: 'string' }, anio: { type: 'integer' }, lugar: { type: 'string' }, dato: { type: 'string' } }),
+    components: { schemas: { ...sharedSchemas, Publicacion: publicationSchema } }
   }
 };

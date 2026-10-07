@@ -1,11 +1,12 @@
 import { createServer } from 'node:http';
-import { createAppointment, findAppointment, listAppointments } from './appointments.js';
+import { createAppointment, findAppointment, listAppointments } from './posts/appointments.js';
 import { createThemeRegistry } from './themes/index.js';
-import { createBookReservation, findBookReservation, listBookReservations } from './bookReservations.js';
-import { createOrder, findOrder, listOrders } from './orders.js';
-import { createTicket, findTicket, listTickets } from './tickets.js';
-import { createCosmeticAppointment, findCosmeticAppointment, listCosmeticAppointments } from './cosmeticAppointments.js';
-import { createEyeAppointment, findEyeAppointment, listEyeAppointments } from './eyeAppointments.js';
+import { createBookReservation, findBookReservation, listBookReservations } from './posts/bookReservations.js';
+import { createOrder, findOrder, listOrders } from './posts/orders.js';
+import { createTicket, findTicket, listTickets } from './posts/tickets.js';
+import { createCosmeticAppointment, findCosmeticAppointment, listCosmeticAppointments } from './posts/cosmeticAppointments.js';
+import { createEyeAppointment, findEyeAppointment, listEyeAppointments } from './posts/eyeAppointments.js';
+import { createPublication, findPublication, listPublications } from './posts/publications.js';
 import { apiSpecifications } from './openapi.js';
 
 const themes = createThemeRegistry();
@@ -54,10 +55,10 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && pathname === '/docs') {
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li><li><a href="/docs/marihuana">API de Marihuana</a></li><li><a href="/docs/peliculas">API de Películas</a></li><li><a href="/docs/cosmeticos">API de Cosméticos</a></li><li><a href="/docs/oftalmologia">API de Oftalmología</a></li></ul></body></html>');
+    return response.end('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación de la API</title><body><h1>Documentación de la API</h1><ul><li><a href="/docs/barberia">API de Barbería</a></li><li><a href="/docs/libros">API de Libros</a></li><li><a href="/docs/marihuana">API de Marihuana</a></li><li><a href="/docs/peliculas">API de Películas</a></li><li><a href="/docs/cosmeticos">API de Cosméticos</a></li><li><a href="/docs/oftalmologia">API de Oftalmología</a></li><li><a href="/docs/animales">API de Animales</a></li><li><a href="/docs/espacio">API de Espacio</a></li><li><a href="/docs/historia">API de Historia</a></li></ul></body></html>');
   }
 
-  const docsRoute = pathname.match(/^\/docs\/(barberia|libros|marihuana|peliculas|cosmeticos|oftalmologia)\/?$/);
+  const docsRoute = pathname.match(/^\/docs\/(barberia|libros|marihuana|peliculas|cosmeticos|oftalmologia|animales|espacio|historia)\/?$/);
   if (docsRoute && request.method === 'GET') {
     const grupo = docsRoute[1];
     const specUrl = `/api/openapi/${grupo}.json`;
@@ -65,7 +66,7 @@ const server = createServer(async (request, response) => {
     return response.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentación ${grupo}</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head><body><nav><a href="/docs">Todas las API</a></nav><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui' });</script></body></html>`);
   }
 
-  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros|marihuana|peliculas|cosmeticos|oftalmologia)\.json$/);
+  const specRoute = pathname.match(/^\/api\/openapi\/(barberia|libros|marihuana|peliculas|cosmeticos|oftalmologia|animales|espacio|historia)\.json$/);
   if (specRoute && request.method === 'GET') return sendJson(response, 200, apiSpecifications[specRoute[1]]);
 
   const appointmentRoute = pathname.match(/^\/api\/barberia\/turnos(?:\/([^/]+))?\/?$/);
@@ -266,6 +267,39 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 201, appointment);
     }
     return sendJson(response, 405, { error: 'Usa GET para consultar citas y POST para crear una.' });
+  }
+
+  const publicationRoute = pathname.match(/^\/api\/(animales|espacio|historia)\/publicaciones(?:\/([^/]+))?\/?$/);
+  if (publicationRoute) {
+    const slug = publicationRoute[1];
+    const id = publicationRoute[2] ? decodeURIComponent(publicationRoute[2]) : null;
+    if (request.method === 'GET') {
+      if (id) {
+        const publication = await findPublication(slug, id);
+        return publication
+          ? sendJson(response, 200, publication)
+          : sendJson(response, 404, { error: 'Publicación no encontrada.' });
+      }
+      const publications = await listPublications(slug);
+      return sendJson(response, 200, { cantidad: publications.length, publicaciones: publications });
+    }
+    if (request.method === 'POST' && !id) {
+      let input;
+      try {
+        input = await readJsonBody(request);
+      } catch (error) {
+        const status = error.message === 'BODY_TOO_LARGE' ? 413 : 400;
+        const message = error.message === 'BODY_TOO_LARGE' ? 'El cuerpo supera el límite de 10 KB.' : 'Envía un JSON válido.';
+        return sendJson(response, status, { error: message });
+      }
+      const { titulo, contenido } = input ?? {};
+      if (![titulo, contenido].every((value) => typeof value === 'string' && value.trim())) {
+        return sendJson(response, 400, { error: 'Se requieren titulo y contenido como textos no vacíos.' });
+      }
+      const publication = await createPublication(slug, { titulo, contenido });
+      return sendJson(response, 201, publication);
+    }
+    return sendJson(response, 405, { error: 'Usa GET para consultar publicaciones y POST para crear una.' });
   }
 
   if (request.method !== 'GET') {
